@@ -13,7 +13,7 @@ import { ApiErrorCode } from '@server/constants/error';
 import { MediaServerType, ServerType } from '@server/constants/server';
 import axios from 'axios';
 import { Field, Form, Formik } from 'formik';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useIntl } from 'react-intl';
 import * as Yup from 'yup';
 
@@ -41,10 +41,7 @@ interface JellyfinLoginProps {
   serverType?: MediaServerType;
 }
 
-const JellyfinLogin: React.FC<JellyfinLoginProps> = ({
-  revalidate,
-  serverType,
-}) => {
+const JellyfinLogin = ({ revalidate, serverType }: JellyfinLoginProps) => {
   const toasts = useToasts();
   const intl = useIntl();
   const settings = useSettings();
@@ -58,6 +55,16 @@ const JellyfinLogin: React.FC<JellyfinLoginProps> = ({
           ? ServerType.EMBY
           : 'Media Server',
   };
+
+  const handleQuickConnectError = useCallback(
+    (error: string) => {
+      toasts.addToast(error, {
+        autoDismiss: true,
+        appearance: 'error',
+      });
+    },
+    [toasts]
+  );
 
   const LoginSchema = Yup.object().shape({
     username: Yup.string().required(
@@ -230,12 +237,7 @@ const JellyfinLogin: React.FC<JellyfinLoginProps> = ({
             setShowQuickConnect(false);
             revalidate();
           }}
-          onError={(error) => {
-            toasts.addToast(error, {
-              autoDismiss: true,
-              appearance: 'error',
-            });
-          }}
+          onError={handleQuickConnectError}
           mediaServerName={mediaServerFormatValues.mediaServerName}
         />
       )}
