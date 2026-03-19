@@ -18,8 +18,17 @@ import axios from 'axios';
 import { Router } from 'express';
 import net from 'net';
 import validator from 'validator';
+import { z } from 'zod';
 
 const authRoutes = Router();
+
+export const quickConnectSecret = z.object({
+  secret: z
+    .string()
+    .min(8)
+    .max(128)
+    .regex(/^[A-Fa-f0-9]+$/),
+});
 
 authRoutes.get('/me', isAuthenticated(), async (req, res) => {
   const userRepository = getRepository(User);
@@ -621,20 +630,15 @@ authRoutes.post('/jellyfin/quickconnect/initiate', async (req, res, next) => {
 });
 
 authRoutes.get('/jellyfin/quickconnect/check', async (req, res, next) => {
-  const secret = req.query.secret as string;
-
-  if (
-    !secret ||
-    typeof secret !== 'string' ||
-    secret.length < 8 ||
-    secret.length > 128 ||
-    !/^[A-Fa-f0-9]+$/.test(secret)
-  ) {
+  const result = quickConnectSecret.safeParse(req.query);
+  if (!result.success) {
     return next({
       status: 400,
       message: 'Invalid secret format',
     });
   }
+
+  const { secret } = result.data;
 
   try {
     const hostname = getHostname();
@@ -660,20 +664,15 @@ authRoutes.post(
   async (req, res, next) => {
     const settings = getSettings();
     const userRepository = getRepository(User);
-    const body = req.body as { secret?: string };
-
-    if (
-      !body.secret ||
-      typeof body.secret !== 'string' ||
-      body.secret.length < 8 ||
-      body.secret.length > 128 ||
-      !/^[A-Fa-f0-9]+$/.test(body.secret)
-    ) {
+    const result = quickConnectSecret.safeParse(req.body);
+    if (!result.success) {
       return next({
         status: 400,
         message: 'Secret required',
       });
     }
+
+    const { secret } = result.data;
 
     if (
       settings.main.mediaServerType === MediaServerType.NOT_CONFIGURED ||
@@ -693,9 +692,7 @@ authRoutes.post(
         undefined
       );
 
-      const account = await jellyfinServer.authenticateQuickConnect(
-        body.secret
-      );
+      const account = await jellyfinServer.authenticateQuickConnect(secret);
 
       let user = await userRepository.findOne({
         where: { jellyfinUserId: account.User.Id },
