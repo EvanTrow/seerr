@@ -584,7 +584,8 @@ userSettingsRoutes.post<{ secret: string }>(
         error: e,
       });
 
-      return res.status(500).send();
+      const status = e instanceof ApiError ? e.statusCode : 500;
+      return res.status(status).send();
     }
   }
 );

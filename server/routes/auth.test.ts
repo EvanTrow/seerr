@@ -157,6 +157,15 @@ describe('POST /auth/jellyfin/quickconnect/initiate', () => {
     assert.strictEqual(res.status, 500);
     assert.match(res.body.message, /initiate quick connect/i);
   });
+
+  it('returns 500 when initiateQuickConnect throws ApiError', async () => {
+    initiateQCMock.mock.mockImplementation(async () => {
+      throw new ApiError(500, ApiErrorCode.Unknown);
+    });
+
+    const res = await request(app).post('/auth/jellyfin/quickconnect/initiate');
+    assert.strictEqual(res.status, 500);
+  });
 });
 
 describe('GET /auth/jellyfin/quickconnect/check', () => {
@@ -197,6 +206,7 @@ describe('GET /auth/jellyfin/quickconnect/check', () => {
 
     assert.strictEqual(res.status, 400);
     assert.match(res.body.message, /invalid secret/i);
+    assert.strictEqual(checkQCMock.mock.callCount(), 0);
   });
 
   it('returns 400 when secret is too short', async () => {
@@ -206,6 +216,7 @@ describe('GET /auth/jellyfin/quickconnect/check', () => {
 
     assert.strictEqual(res.status, 400);
     assert.match(res.body.message, /invalid secret/i);
+    assert.strictEqual(checkQCMock.mock.callCount(), 0);
   });
 
   it('returns 400 when secret is too long', async () => {
@@ -215,6 +226,7 @@ describe('GET /auth/jellyfin/quickconnect/check', () => {
 
     assert.strictEqual(res.status, 400);
     assert.match(res.body.message, /invalid secret/i);
+    assert.strictEqual(checkQCMock.mock.callCount(), 0);
   });
 
   it('returns 400 when secret contains non-hex characters', async () => {
@@ -224,6 +236,7 @@ describe('GET /auth/jellyfin/quickconnect/check', () => {
 
     assert.strictEqual(res.status, 400);
     assert.match(res.body.message, /invalid secret/i);
+    assert.strictEqual(checkQCMock.mock.callCount(), 0);
   });
 
   it('returns error when Jellyfin API fails', async () => {
@@ -254,6 +267,7 @@ describe('POST /auth/jellyfin/quickconnect/authenticate', () => {
       .send({});
 
     assert.strictEqual(res.status, 400);
+    assert.strictEqual(authenticateQCMock.mock.callCount(), 0);
   });
 
   it('returns 400 when secret is not a string', async () => {
@@ -262,6 +276,7 @@ describe('POST /auth/jellyfin/quickconnect/authenticate', () => {
       .send({ secret: 12345678 });
 
     assert.strictEqual(res.status, 400);
+    assert.strictEqual(authenticateQCMock.mock.callCount(), 0);
   });
 
   it('returns 400 when secret is too short', async () => {
@@ -278,6 +293,7 @@ describe('POST /auth/jellyfin/quickconnect/authenticate', () => {
       .send({ secret: 'zzzzzzzzzzzz' });
 
     assert.strictEqual(res.status, 400);
+    assert.strictEqual(authenticateQCMock.mock.callCount(), 0);
   });
 
   it('returns 403 when media server is not configured', async () => {
@@ -290,6 +306,7 @@ describe('POST /auth/jellyfin/quickconnect/authenticate', () => {
 
     assert.strictEqual(res.status, 403);
     assert.match(res.body.message, /initial setup/i);
+    assert.strictEqual(authenticateQCMock.mock.callCount(), 0);
   });
 
   it('returns 403 when no users exist in the database', async () => {
@@ -394,11 +411,16 @@ describe('POST /auth/jellyfin/quickconnect/authenticate', () => {
       AccessToken: 'emby-token',
     }));
 
-    const res = await request(app)
+    const agent = request.agent(app);
+    const res = await agent
       .post('/auth/jellyfin/quickconnect/authenticate')
       .send({ secret: 'abc123def456abc123def456' });
 
     assert.strictEqual(res.status, 200);
+
+    const meRes = await agent.get('/auth/me');
+    assert.strictEqual(meRes.status, 200);
+    assert.strictEqual(meRes.body.jellyfinUsername, 'embyuser');
 
     const userRepo = getRepository(User);
     const user = await userRepo.findOne({
@@ -467,7 +489,7 @@ describe('POST /auth/jellyfin/quickconnect/authenticate', () => {
       .post('/auth/jellyfin/quickconnect/authenticate')
       .send({ secret: 'abc123def456abc123def456' });
 
-    assert.ok(res.status >= 400);
+    assert.strictEqual(res.status, 401);
     assert.strictEqual(res.body.message, ApiErrorCode.InvalidCredentials);
   });
 

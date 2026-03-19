@@ -5260,6 +5260,8 @@ paths:
               required:
                 - secret
       responses:
+        '400':
+          description: Invalid Quick Connect secret
         '204':
           description: Account successfully linked
         '401':

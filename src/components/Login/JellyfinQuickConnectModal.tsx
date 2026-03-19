@@ -34,16 +34,11 @@ const JellyfinQuickConnectModal = ({
 }: JellyfinQuickConnectModalProps) => {
   const intl = useIntl();
 
-  const authenticate = useCallback(
-    async (secret: string) => {
-      await axios.post('/api/v1/auth/jellyfin/quickconnect/authenticate', {
-        secret,
-      });
-      onAuthenticated();
-      onClose();
-    },
-    [onAuthenticated, onClose]
-  );
+  const authenticate = useCallback(async (secret: string) => {
+    await axios.post('/api/v1/auth/jellyfin/quickconnect/authenticate', {
+      secret,
+    });
+  }, []);
 
   const {
     code,

@@ -55,10 +55,8 @@ const LinkJellyfinQuickConnectModal = ({
         `/api/v1/user/${user?.id}/settings/linked-accounts/jellyfin/quickconnect`,
         { secret }
       );
-      onSave();
-      onClose();
     },
-    [user, onSave, onClose]
+    [user]
   );
 
   const {
@@ -70,7 +68,7 @@ const LinkJellyfinQuickConnectModal = ({
     initiateQuickConnect,
     cleanup,
   } = useQuickConnect({
-    show: true,
+    show,
     onSuccess: () => {
       onSave();
       onClose();
