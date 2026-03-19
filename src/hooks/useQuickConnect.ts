@@ -146,7 +146,7 @@ export const useQuickConnect = ({
       setCode(response.data.code);
       setIsLoading(false);
       startPolling(response.data.secret);
-    } catch (error) {
+    } catch {
       if (!isMounted.current) return;
 
       setHasError(true);
