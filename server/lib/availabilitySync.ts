@@ -1064,9 +1064,7 @@ class AvailabilitySync {
   ): Promise<boolean> {
     const ratingKey = media.jellyfinMediaId;
     const ratingKey4k = media.jellyfinMediaId4k;
-    let seasonExistsInJellyfin = false;
 
-    // Check each jellyfin instance to see if the season exists
     let jellyfinSeasons: JellyfinLibraryItem[] | undefined;
 
     if (ratingKey && !is4k) {
@@ -1077,20 +1075,41 @@ class AvailabilitySync {
       jellyfinSeasons = this.jellyfinSeasonsCache[ratingKey4k];
     }
 
-    const seasonIsAvailable = jellyfinSeasons?.find(
+    const seasonMeta = jellyfinSeasons?.find(
       (jellyfinSeason) => jellyfinSeason.IndexNumber === season.seasonNumber
     );
 
     logger.debug(
-      `[AvailabilitySync] Jellyfin season check: TMDB ${media.tmdbId} S${season.seasonNumber} - found: ${!!seasonIsAvailable}, total cached seasons: ${jellyfinSeasons?.length ?? 0}`,
+      `[AvailabilitySync] Jellyfin season check: TMDB ${media.tmdbId} S${season.seasonNumber} - found: ${!!seasonMeta}, total cached seasons: ${jellyfinSeasons?.length ?? 0}`,
       { label: 'AvailabilitySync' }
     );
 
-    if (seasonIsAvailable) {
-      seasonExistsInJellyfin = true;
+    if (!seasonMeta) {
+      return false;
     }
 
-    return seasonExistsInJellyfin;
+    // Season metadata exists, but we need to verify it has actual episode files.
+    // Jellyfin keeps season entries even after all episodes are deleted.
+    // getEpisodes already filters out virtual episodes.
+    try {
+      const seriesId = is4k ? ratingKey4k : ratingKey;
+      if (!seriesId) return false;
+
+      const episodes = await this.jellyfinClient.getEpisodes(
+        seriesId,
+        seasonMeta.Id
+      );
+
+      logger.debug(
+        `[AvailabilitySync] Jellyfin episode check: TMDB ${media.tmdbId} S${season.seasonNumber} - ${episodes.length} non-virtual episodes`,
+        { label: 'AvailabilitySync' }
+      );
+
+      return episodes.length > 0;
+    } catch {
+      // If we can't fetch episodes, assume the season exists to avoid false removal
+      return true;
+    }
   }
 }
 
