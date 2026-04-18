@@ -81,3 +81,46 @@ jobs:
           # Fix test titles in cypress dashboard
           COMMIT_INFO_MESSAGE: ${{github.event.pull_request.title}}
           COMMIT_INFO_SHA: ${{github.event.pull_request.head.sha}}
+
+  cypress-component:
+    name: Cypress Component Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version-file: package.json
+          package-manager-cache: false
+
+      - name: Pnpm Setup
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup cypress cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: ~/.cache/Cypress
+          key: ${{ runner.os }}-cypress-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-cypress-store-
+
+      - name: Install Cypress binary
+        env:
+          CYPRESS_CACHE_FOLDER: ~/.cache/Cypress
+        run: pnpm exec cypress install
+
+      - name: Cypress component run
+        uses: cypress-io/github-action@f790eee7a50d9505912f50c2095510be7de06aa7
+        with:
+          install: false
+          component: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CYPRESS_COMPONENT_BUILD: 1

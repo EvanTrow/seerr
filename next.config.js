@@ -20,6 +20,13 @@ module.exports = {
       use: ['@svgr/webpack'],
     });
 
+    if (process.env.CYPRESS_COMPONENT_BUILD) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'country-flag-icons/3x2/flags.css': false,
+      };
+    }
+
     return config;
   },
   experimental: {

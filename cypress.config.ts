@@ -6,6 +6,14 @@ export default defineConfig({
     baseUrl: 'http://localhost:5055',
     video: true,
   },
+  component: {
+    devServer: {
+      framework: 'next',
+      bundler: 'webpack',
+    },
+    supportFile: 'cypress/support/component.ts',
+    indexHtmlFile: 'cypress/support/component-index.html',
+  },
   env: {
     ADMIN_EMAIL: 'admin@seerr.dev',
     ADMIN_PASSWORD: 'test1234',
