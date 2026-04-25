@@ -216,6 +216,7 @@ interface FullPublicSettings extends PublicSettings {
   userEmailRequired: boolean;
   newPlexLogin: boolean;
   youtubeUrl: string;
+  metadataSettings: MetadataSettings;
   plexClientIdentifier: string;
 }
 
@@ -738,6 +739,7 @@ class Settings {
         this.data.notifications.agents.email.options.userEmailRequired,
       newPlexLogin: this.data.main.newPlexLogin,
       youtubeUrl: this.data.main.youtubeUrl,
+      metadataSettings: this.data.metadataSettings,
       plexClientIdentifier: this.data.clientId,
     };
   }
