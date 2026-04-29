@@ -63,7 +63,12 @@ const PlexImportModal = ({ onCancel, onComplete }: PlexImportProps) => {
         throw new Error('Invalid import response from Plex import endpoint.');
       }
 
-      if (createdUsers.length > 0) {
+      if (isSyncOnly) {
+        addToast(intl.formatMessage(messages.importfromplexsynced), {
+          autoDismiss: true,
+          appearance: 'success',
+        });
+      } else if (createdUsers.length > 0) {
         addToast(
           intl.formatMessage(messages.importedfromplex, {
             userCount: createdUsers.length,
@@ -84,11 +89,6 @@ const PlexImportModal = ({ onCancel, onComplete }: PlexImportProps) => {
             appearance: 'warning',
           }
         );
-      } else {
-        addToast(intl.formatMessage(messages.importfromplexsynced), {
-          autoDismiss: true,
-          appearance: 'success',
-        });
       }
 
       if (onComplete) {
