@@ -15,11 +15,12 @@ const movieRoutes = Router();
 
 movieRoutes.get('/:id', async (req, res, next) => {
   const tmdb = new TheMovieDb();
+  const mediaLocale = req.user?.settings?.mediaLocale ?? req.locale;
 
   try {
     const tmdbMovie = await tmdb.getMovie({
       movieId: Number(req.params.id),
-      language: (req.query.language as string) ?? req.locale,
+      language: (req.query.language as string) ?? mediaLocale,
     });
 
     const media = await Media.getMedia(tmdbMovie.id, MediaType.MOVIE);
@@ -58,12 +59,13 @@ movieRoutes.get('/:id', async (req, res, next) => {
 
 movieRoutes.get('/:id/recommendations', async (req, res, next) => {
   const tmdb = new TheMovieDb();
+  const mediaLocale = req.user?.settings?.mediaLocale ?? req.locale;
 
   try {
     const results = await tmdb.getMovieRecommendations({
       movieId: Number(req.params.id),
       page: Number(req.query.page),
-      language: (req.query.language as string) ?? req.locale,
+      language: (req.query.language as string) ?? mediaLocale,
     });
 
     const media = await Media.getRelatedMedia(
@@ -103,12 +105,13 @@ movieRoutes.get('/:id/recommendations', async (req, res, next) => {
 
 movieRoutes.get('/:id/similar', async (req, res, next) => {
   const tmdb = new TheMovieDb();
+  const mediaLocale = req.user?.settings?.mediaLocale ?? req.locale;
 
   try {
     const results = await tmdb.getMovieSimilar({
       movieId: Number(req.params.id),
       page: Number(req.query.page),
-      language: (req.query.language as string) ?? req.locale,
+      language: (req.query.language as string) ?? mediaLocale,
     });
 
     const media = await Media.getRelatedMedia(
