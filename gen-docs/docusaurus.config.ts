@@ -12,6 +12,12 @@ const config: Config = {
   baseUrl: '/',
   trailingSlash: false,
 
+  future: {
+    faster: {
+      swcJsMinimizer: true,
+    },
+  },
+
   organizationName: 'seerr-team',
   projectName: 'seerr',
   deploymentBranch: 'gh-pages',
