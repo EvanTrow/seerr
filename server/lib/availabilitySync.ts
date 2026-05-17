@@ -122,6 +122,13 @@ class AvailabilitySync {
           throw new Error('Job aborted');
         }
 
+        logger.debug(
+          `Media [TMDB ID ${media.tmdbId}] is being checked for availability.`,
+          {
+            ...media,
+          }
+        );
+
         // Check plex, radarr, and sonarr for that specific media and
         // if unavailable, then we change the status accordingly.
         // If a non-4k or 4k version exists in at least one of the instances, we will only update that specific version
@@ -241,6 +248,14 @@ class AvailabilitySync {
             existsInSonarr: existsInSonarr4k,
             seasonsMap: sonarrSeasonsMap4k,
           } = await this.mediaExistsInSonarr(media, true);
+
+          logger.debug(
+            `Media [TMDB ID ${media.tmdbId}] availability check results`,
+            {
+              sonarrSeasonsMap: Object.fromEntries(sonarrSeasonsMap),
+              sonarrSeasonsMap4k: Object.fromEntries(sonarrSeasonsMap4k),
+            }
+          );
 
           //plex
           if (mediaServerType === MediaServerType.PLEX) {
