@@ -220,7 +220,7 @@
   "components.UserProfile.UserSettings.UserNotificationSettings.webpush": "Web Push",
   "components.UserProfile.UserSettings.UserNotificationSettings.validationTelegramChatId": "Meg kell adnia egy érvényes chat azonosítót",
   "components.UserProfile.UserSettings.UserNotificationSettings.validationPgpPublicKey": "Érvényes PGP- kulcsot kell megadnia",
-  "components.UserProfile.UserSettings.UserNotificationSettings.validationDiscordId": "Minden azonosító érvényes Discors felhasználói azonosító kell legyen",
+  "components.UserProfile.UserSettings.UserNotificationSettings.validationDiscordId": "Minden azonosító érvényes Discord felhasználói azonosító kell legyen",
   "components.UserProfile.UserSettings.UserNotificationSettings.telegramsettingssaved": "Telegram értesítés beállítások mentése sikeres!",
   "components.UserProfile.UserSettings.UserNotificationSettings.telegramsettingsfailed": "A Telegram-értesítés beállításait nem sikerült elmenteni.",
   "components.UserProfile.UserSettings.UserNotificationSettings.telegramChatIdTipLong": "<TelegramBotLink>Csevegés indítása</TelegramBotLink>, <GetIdBotLink>@get_id_bot</GetIdBotLink> hozzáadása, és a <code>/my_id</code> parancs kiadása",
