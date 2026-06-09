@@ -27,7 +27,7 @@ export const useQuickConnect = ({
   const [isExpired, setIsExpired] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const pollingInterval = useRef<NodeJS.Timeout>();
+  const pollingInterval = useRef<NodeJS.Timeout | undefined>(undefined);
   const isMounted = useRef(true);
   const hasInitiated = useRef(false);
   const errorCount = useRef(0);
