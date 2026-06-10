@@ -698,9 +698,9 @@ authRoutes.post(
         where: { jellyfinUserId: account.User.Id },
       });
 
-      const deviceId = Buffer.from(`BOT_seerr_qc_${account.User.Id}`).toString(
-        'base64'
-      );
+      const deviceId = Buffer.from(
+        `BOT_seerr_${account.User.Name ?? ''}`
+      ).toString('base64');
 
       if (user) {
         logger.info('Quick Connect sign-in from existing user', {

@@ -560,7 +560,7 @@ userSettingsRoutes.post<{ secret: string }>(
 
       const user = req.user;
       const deviceId = Buffer.from(
-        `BOT_seerr_qc_link_${account.User.Id}`
+        user.id === 1 ? 'BOT_seerr' : `BOT_seerr_${user.username ?? ''}`
       ).toString('base64');
 
       user.userType =
