@@ -15,9 +15,16 @@ interface PlexImportProps {
   onComplete?: () => void;
 }
 
+interface PlexImportResponse {
+  createdUsers: unknown[];
+  refreshedUsers: number;
+}
+
 const messages = defineMessages('components.UserList', {
   importfromplex: 'Import Plex Users',
   importfromplexerror: 'Something went wrong while importing Plex users.',
+  importfromplexnochanges:
+    'Plex import completed. No users were created or refreshed.',
   importfromplexsynced:
     'Plex users synced successfully. Existing users were refreshed.',
   syncnotice:
@@ -54,20 +61,25 @@ const PlexImportModal = ({ onCancel, onComplete }: PlexImportProps) => {
     setImporting(true);
 
     try {
-      const { data: createdUsers } = await axios.post(
+      const { data: importResponse } = await axios.post<PlexImportResponse>(
         '/api/v1/user/import-from-plex',
         { plexIds: selectedUsers }
       );
 
-      if (!Array.isArray(createdUsers)) {
-        throw new Error('Invalid import response from Plex import endpoint.');
-      }
+      const { createdUsers, refreshedUsers } = importResponse;
 
       if (isSyncOnly) {
-        addToast(intl.formatMessage(messages.importfromplexsynced), {
-          autoDismiss: true,
-          appearance: 'success',
-        });
+        if (refreshedUsers > 0) {
+          addToast(intl.formatMessage(messages.importfromplexsynced), {
+            autoDismiss: true,
+            appearance: 'success',
+          });
+        } else {
+          addToast(intl.formatMessage(messages.importfromplexnochanges), {
+            autoDismiss: true,
+            appearance: 'info',
+          });
+        }
       } else if (createdUsers.length > 0) {
         addToast(
           intl.formatMessage(messages.importedfromplex, {
@@ -89,6 +101,16 @@ const PlexImportModal = ({ onCancel, onComplete }: PlexImportProps) => {
             appearance: 'warning',
           }
         );
+      } else if (refreshedUsers > 0) {
+        addToast(intl.formatMessage(messages.importfromplexsynced), {
+          autoDismiss: true,
+          appearance: 'success',
+        });
+      } else {
+        addToast(intl.formatMessage(messages.importfromplexnochanges), {
+          autoDismiss: true,
+          appearance: 'info',
+        });
       }
 
       if (onComplete) {
