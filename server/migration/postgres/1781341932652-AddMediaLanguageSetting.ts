@@ -1,7 +1,7 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddMediaLanguageSetting1777644799789 implements MigrationInterface {
-  name = 'AddMediaLanguageSetting1777644799789';
+export class AddMediaLanguageSetting1781341932652 implements MigrationInterface {
+  name = 'AddMediaLanguageSetting1781341932652';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
