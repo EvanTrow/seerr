@@ -88,7 +88,7 @@ async function seedRequest(status = MediaRequestStatus.PENDING) {
   const requestRepo = getRepository(MediaRequest);
 
   const requestedBy = await userRepo.findOneOrFail({
-    where: { email: 'friend@seerr.dev' },
+    where: { email: 'demo@seerr.dev' },
   });
 
   const media = await mediaRepo.save(
@@ -121,7 +121,7 @@ describe('DELETE /request/:requestId', () => {
   it('allows the owner to delete their own pending request', async () => {
     const mediaRequest = await seedRequest();
 
-    const agent = await loginAs('friend@seerr.dev', 'test1234');
+    const agent = await loginAs('demo@seerr.dev', 'test1234');
     const res = await agent.delete(`/request/${mediaRequest.id}`);
 
     assert.strictEqual(res.status, 204);
@@ -165,7 +165,7 @@ describe('DELETE /request/:requestId', () => {
       })
     );
 
-    const agent = await loginAs('friend@seerr.dev', 'test1234');
+    const agent = await loginAs('demo@seerr.dev', 'test1234');
     const res = await agent.delete(`/request/${mediaRequest.id}`);
 
     assert.strictEqual(res.status, 401);
@@ -174,7 +174,7 @@ describe('DELETE /request/:requestId', () => {
   it('prevents the owner from deleting an approved request', async () => {
     const mediaRequest = await seedRequest(MediaRequestStatus.APPROVED);
 
-    const agent = await loginAs('friend@seerr.dev', 'test1234');
+    const agent = await loginAs('demo@seerr.dev', 'test1234');
     const res = await agent.delete(`/request/${mediaRequest.id}`);
 
     assert.strictEqual(res.status, 401);
