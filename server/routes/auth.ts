@@ -1,4 +1,4 @@
-import JellyfinAPI from '@server/api/jellyfin';
+import JellyfinAPI, { type JellyfinUserResponse } from '@server/api/jellyfin';
 import PlexTvAPI from '@server/api/plextv';
 import { ApiErrorCode } from '@server/constants/error';
 import { MediaServerType, ServerType } from '@server/constants/server';
@@ -15,7 +15,7 @@ import { ApiError } from '@server/types/error';
 import { getAppVersion } from '@server/utils/appVersion';
 import { getHostname } from '@server/utils/getHostname';
 import axios from 'axios';
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import net from 'net';
 import validator from 'validator';
 
@@ -218,6 +218,89 @@ authRoutes.post('/plex', async (req, res, next) => {
     });
   }
 });
+
+const DISCORD_PLUGIN_GUID = '359a7d2a-1c54-4e70-abbb-01bc73f098cf';
+
+interface DiscordPluginUser {
+  Id: string;
+  Username: string;
+  Global_name?: string;
+  Email?: string;
+}
+
+interface DiscordPluginConfig {
+  clientId: string;
+  clientSecret: string;
+  serverUrl: string;
+  botToken: string;
+  serverId: string;
+  discordUserData: Record<string, DiscordPluginUser>;
+}
+
+async function getDiscordPluginConfig(
+  apiKey: string
+): Promise<DiscordPluginConfig> {
+  const url = `${getHostname()}/Plugins/${DISCORD_PLUGIN_GUID}/Configuration`;
+  const response = await axios.get<Record<string, unknown>>(url, {
+    headers: {
+      'X-Emby-Authorization': `MediaBrowser Client="Seerr", Device="Seerr", DeviceId="seerr", Version="1.0", Token="${apiKey}"`,
+    },
+  });
+  const data = response.data;
+  return {
+    clientId: (data.ClientId as string) ?? '',
+    clientSecret: (data.ClientSecret as string) ?? '',
+    serverUrl: (data.ServerUrl as string) ?? '',
+    botToken: (data.BotToken as string) ?? '',
+    serverId: (data.ServerId as string) ?? '',
+    discordUserData:
+      (data.DiscordUserData as Record<string, DiscordPluginUser>) ?? {},
+  };
+}
+
+async function getDiscordDisplayName(
+  botToken: string,
+  guildId: string,
+  userId: string,
+  discordUser: { username: string; global_name?: string }
+): Promise<string> {
+  if (botToken && guildId) {
+    try {
+      const res = await fetch(
+        `https://discord.com/api/v10/guilds/${guildId}/members/${userId}`,
+        { headers: { Authorization: `Bot ${botToken}` } }
+      );
+      if (res.ok) {
+        const member = await res.json();
+        if (member.nick) return member.nick;
+      }
+    } catch {
+      // non-fatal — fall through to defaults
+    }
+  }
+  return discordUser.global_name ?? discordUser.username;
+}
+
+function getDiscordAvatarUrl(
+  userId: string,
+  avatarHash: string | null
+): string {
+  if (avatarHash) {
+    const ext = avatarHash.startsWith('a_') ? 'gif' : 'png';
+    return `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.${ext}?size=256`;
+  }
+  return `https://cdn.discordapp.com/embed/avatars/${Number(BigInt(userId) % 6n)}.png`;
+}
+
+function getSeerrBaseUrl(
+  settings: ReturnType<typeof getSettings>,
+  req: Request
+) {
+  return (
+    settings.main.applicationUrl?.replace(/\/$/, '') ||
+    `${req.protocol}://${req.get('host')}`
+  );
+}
 
 function getUserAvatarUrl(user: User): string {
   return `/avatarproxy/${user.jellyfinUserId}?v=${user.avatarVersion}`;
@@ -590,6 +673,280 @@ authRoutes.post('/jellyfin', async (req, res, next) => {
           message: 'Something went wrong.',
         });
     }
+  }
+});
+
+authRoutes.get('/discord/login', async (req, res, next) => {
+  const settings = getSettings();
+
+  if (
+    settings.main.mediaServerType !== MediaServerType.NOT_CONFIGURED &&
+    (settings.main.mediaServerLogin === false ||
+      settings.jellyfin.enableDiscordAuth === false ||
+      (settings.main.mediaServerType !== MediaServerType.JELLYFIN &&
+        settings.main.mediaServerType !== MediaServerType.EMBY))
+  ) {
+    return res.status(403).json({ error: 'Discord sign-in is disabled.' });
+  }
+
+  try {
+    const pluginConfig = await getDiscordPluginConfig(settings.jellyfin.apiKey);
+
+    if (!pluginConfig.clientId) {
+      return next({
+        status: 500,
+        message:
+          'Discord plugin is not configured on the Jellyfin server. Set a Client ID in the plugin settings.',
+      });
+    }
+
+    const redirectUri = `${getSeerrBaseUrl(settings, req)}/login`;
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: pluginConfig.clientId,
+      scope: 'identify email',
+      redirect_uri: redirectUri,
+      state: 'discord',
+      prompt: 'consent',
+    });
+
+    return res.redirect(`https://discord.com/oauth2/authorize?${params}`);
+  } catch (e) {
+    logger.error('Failed to fetch Discord plugin configuration from Jellyfin', {
+      label: 'Auth',
+      errorMessage: e.message,
+    });
+    return next({
+      status: 500,
+      message: 'Failed to retrieve Discord configuration from Jellyfin.',
+    });
+  }
+});
+
+authRoutes.post('/discord', async (req, res, next) => {
+  const settings = getSettings();
+  const userRepository = getRepository(User);
+  const body = req.body as { code?: string };
+
+  if (
+    settings.main.mediaServerType !== MediaServerType.NOT_CONFIGURED &&
+    (settings.main.mediaServerLogin === false ||
+      settings.jellyfin.enableDiscordAuth === false ||
+      (settings.main.mediaServerType !== MediaServerType.JELLYFIN &&
+        settings.main.mediaServerType !== MediaServerType.EMBY))
+  ) {
+    return res.status(403).json({ error: 'Discord sign-in is disabled.' });
+  }
+
+  if (!body.code) {
+    return next({ status: 400, message: 'Authorization code required.' });
+  }
+
+  try {
+    const pluginConfig = await getDiscordPluginConfig(settings.jellyfin.apiKey);
+
+    if (!pluginConfig.clientId || !pluginConfig.clientSecret) {
+      return next({
+        status: 500,
+        message:
+          'Discord plugin is not configured on the Jellyfin server. Set Client ID and Client Secret in the plugin settings.',
+      });
+    }
+
+    const redirectUri = `${getSeerrBaseUrl(settings, req)}/login`;
+
+    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: pluginConfig.clientId,
+        client_secret: pluginConfig.clientSecret,
+        grant_type: 'authorization_code',
+        code: body.code,
+        redirect_uri: redirectUri,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      logger.error('Failed to fetch Discord OAuth2 token', {
+        label: 'Auth',
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        ip: req.ip,
+      });
+      return next({
+        status: 500,
+        message: 'Unable to authenticate with Discord.',
+      });
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
+    const discordUserResponse = await fetch(
+      'https://discord.com/api/v10/users/@me',
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    if (!discordUserResponse.ok) {
+      logger.error('Failed to fetch Discord user profile', {
+        label: 'Auth',
+        status: discordUserResponse.status,
+        ip: req.ip,
+      });
+      return next({
+        status: 500,
+        message: 'Unable to authenticate with Discord.',
+      });
+    }
+
+    const discordUser = await discordUserResponse.json();
+    const discordId: string = discordUser.id;
+
+    logger.debug(
+      'Discord OAuth successful, looking up Jellyfin user via plugin map',
+      {
+        label: 'Auth',
+        discordId,
+        discordUsername: discordUser.username,
+        ip: req.ip,
+      }
+    );
+
+    // Find the Jellyfin user ID mapped to this Discord user in the plugin
+    const jellyfinUserId = Object.entries(pluginConfig.discordUserData).find(
+      ([, du]) => du.Id === discordId
+    )?.[0];
+
+    if (!jellyfinUserId) {
+      logger.warn(
+        'Failed Discord sign-in: Discord account not linked to any Jellyfin user',
+        {
+          label: 'Auth',
+          discordId,
+          ip: req.ip,
+        }
+      );
+      return next({ status: 403, message: 'Access denied.' });
+    }
+
+    // Fetch the specific Jellyfin user to verify they are not disabled
+    const jellyfinClient = new JellyfinAPI(
+      getHostname(),
+      settings.jellyfin.apiKey,
+      'BOT_seerr'
+    );
+    jellyfinClient.setUserId(jellyfinUserId);
+
+    let jellyfinUser: JellyfinUserResponse;
+    try {
+      jellyfinUser = await jellyfinClient.getUser();
+    } catch {
+      logger.warn('Failed Discord sign-in: could not fetch Jellyfin user', {
+        label: 'Auth',
+        jellyfinUserId,
+        discordId,
+        ip: req.ip,
+      });
+      return next({ status: 403, message: 'Access denied.' });
+    }
+
+    if (jellyfinUser.Policy.IsDisabled) {
+      logger.warn('Failed Discord sign-in: Jellyfin user is disabled', {
+        label: 'Auth',
+        jellyfinUserId,
+        jellyfinUsername: jellyfinUser.Name,
+        ip: req.ip,
+      });
+      return next({ status: 403, message: 'Access denied.' });
+    }
+
+    let user = await userRepository.findOne({
+      where: { jellyfinUserId: jellyfinUser.Id },
+    });
+
+    if (!user) {
+      if (!settings.main.newPlexLogin) {
+        logger.warn('Failed Discord sign-in: unimported Jellyfin user', {
+          label: 'Auth',
+          ip: req.ip,
+          jellyfinUserId: jellyfinUser.Id,
+          jellyfinUsername: jellyfinUser.Name,
+        });
+        return next({ status: 403, message: 'Access denied.' });
+      }
+
+      logger.info(
+        'Discord sign-in: creating new Seerr user for Jellyfin user',
+        {
+          label: 'Auth',
+          ip: req.ip,
+          jellyfinUsername: jellyfinUser.Name,
+        }
+      );
+
+      const deviceId = Buffer.from(`BOT_seerr_${jellyfinUser.Name}`).toString(
+        'base64'
+      );
+
+      user = new User({
+        email: discordUser.email ?? jellyfinUser.Name,
+        jellyfinUsername: jellyfinUser.Name,
+        jellyfinUserId: jellyfinUser.Id,
+        jellyfinDeviceId: deviceId,
+        permissions: jellyfinUser.Policy.IsAdministrator
+          ? Permission.ADMIN
+          : settings.main.defaultPermissions,
+        userType:
+          settings.main.mediaServerType === MediaServerType.JELLYFIN
+            ? UserType.JELLYFIN
+            : UserType.EMBY,
+      });
+
+      await user.setPassword(
+        [...Array(32)].map(() => Math.random().toString(36)[2]).join('')
+      );
+      await userRepository.save(user);
+    } else if (
+      jellyfinUser.Policy.IsAdministrator &&
+      !user.hasPermission(Permission.ADMIN)
+    ) {
+      user.permissions = Permission.ADMIN;
+    }
+
+    // Sync display name and avatar from Discord on every login
+    const displayName = await getDiscordDisplayName(
+      pluginConfig.botToken,
+      pluginConfig.serverId,
+      discordId,
+      discordUser
+    );
+    const avatarUrl = getDiscordAvatarUrl(
+      discordId,
+      discordUser.avatar ?? null
+    );
+
+    user.username = displayName;
+    user.avatar = avatarUrl;
+    await userRepository.save(user);
+
+    if (req.session) {
+      req.session.userId = user.id;
+    }
+
+    return res.status(200).json(user.filter() ?? {});
+  } catch (e) {
+    logger.error('Something went wrong authenticating with Discord', {
+      label: 'Auth',
+      errorMessage: e.message,
+      ip: req.ip,
+    });
+    return next({
+      status: 500,
+      message: 'Unable to authenticate with Discord.',
+    });
   }
 });
 

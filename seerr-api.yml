@@ -4039,6 +4039,51 @@ paths:
                   status:
                     type: string
                     example: 'ok'
+  /auth/discord/login:
+    get:
+      summary: Initiate Discord OAuth2 sign-in
+      description: Redirects the browser to Discord's OAuth2 authorization page. Discord OAuth credentials are read from the Jellyfin Discord Auth plugin configuration.
+      security: []
+      tags:
+        - auth
+      responses:
+        '302':
+          description: Redirect to Discord OAuth2 authorization URL
+        '403':
+          description: Discord sign-in is disabled
+        '500':
+          description: Discord plugin is not configured or Jellyfin is unreachable
+  /auth/discord:
+    post:
+      summary: Sign in using Discord OAuth2
+      description: Exchanges a Discord authorization code for an access token, looks up the matching Jellyfin user by Discord username, and creates a session.
+      security: []
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+              required:
+                - code
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Authorization code required
+        '403':
+          description: Access denied
+        '500':
+          description: Authentication error
   /auth/reset-password:
     post:
       summary: Send a reset password email

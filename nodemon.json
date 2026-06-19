@@ -1,0 +1,5 @@
+{
+  "ext": "ts,json,yml",
+  "watch": ["server", "seerr-api.yml"],
+  "exec": "ts-node -r tsconfig-paths/register --files --project server/tsconfig.json server/index.ts"
+}

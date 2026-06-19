@@ -67,6 +67,10 @@ const messages = defineMessages('components.Settings', {
   tip: 'Tip',
   scanbackground:
     'Scanning will run in the background. You can continue the setup process in the meantime.',
+  discordAuthHeading: 'Discord Sign-In',
+  discordAuthDescription:
+    'Allow users to sign in with their Discord account. Credentials are read from the Jellyfin Discord Authentication plugin — configure Client ID and Client Secret there.',
+  enableDiscordAuth: 'Enable Discord Sign-In',
 });
 
 interface Library {
@@ -444,6 +448,7 @@ const SettingsJellyfin: React.FC<SettingsJellyfinProps> = ({
           jellyfinExternalUrl: data?.externalHostname || '',
           jellyfinForgotPasswordUrl: data?.jellyfinForgotPasswordUrl || '',
           apiKey: data?.apiKey,
+          enableDiscordAuth: data?.enableDiscordAuth ?? false,
         }}
         validationSchema={JellyfinSettingsSchema}
         onSubmit={async (values) => {
@@ -456,6 +461,7 @@ const SettingsJellyfin: React.FC<SettingsJellyfinProps> = ({
               externalHostname: values.jellyfinExternalUrl,
               jellyfinForgotPasswordUrl: values.jellyfinForgotPasswordUrl,
               apiKey: values.apiKey,
+              enableDiscordAuth: values.enableDiscordAuth,
             } as JellyfinSettings);
 
             addToast(
@@ -659,6 +665,45 @@ const SettingsJellyfin: React.FC<SettingsJellyfinProps> = ({
                     )}
                 </div>
               </div>
+              {!isSetupSettings && (
+                <>
+                  <div className="mb-6 mt-10">
+                    <h3 className="heading">
+                      {intl.formatMessage(
+                        messages.discordAuthHeading,
+                        mediaServerFormatValues
+                      )}
+                    </h3>
+                    <p className="description">
+                      {intl.formatMessage(
+                        messages.discordAuthDescription,
+                        mediaServerFormatValues
+                      )}
+                    </p>
+                  </div>
+                  <div className="form-row">
+                    <label
+                      htmlFor="enableDiscordAuth"
+                      className="checkbox-label"
+                    >
+                      {intl.formatMessage(messages.enableDiscordAuth)}
+                    </label>
+                    <div className="form-input-area">
+                      <Field
+                        type="checkbox"
+                        id="enableDiscordAuth"
+                        name="enableDiscordAuth"
+                        onChange={() => {
+                          setFieldValue(
+                            'enableDiscordAuth',
+                            !values.enableDiscordAuth
+                          );
+                        }}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
               <div
                 className={`actions ${isSetupSettings ? 'mt-0 border-0' : ''}`}
               >

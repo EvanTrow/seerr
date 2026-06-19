@@ -6,7 +6,7 @@
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "postinstall": "next telemetry disable",
-    "dev": "nodemon -e ts,json,yml --watch server --watch seerr-api.yml --exec 'ts-node -r tsconfig-paths/register --files --project server/tsconfig.json server/index.ts'",
+    "dev": "nodemon",
     "build:server": "tsc --project server/tsconfig.json && copyfiles -u 2 server/templates/**/*.{html,pug} dist/templates && copyfiles -u 2 \"server/i18n/locale/*.json\" dist/i18n && tsc-alias -p server/tsconfig.json",
     "build:next": "next build",
     "build": "pnpm build:next && pnpm build:server",
@@ -130,7 +130,7 @@
     "@types/humanize-duration": "^3.27.4",
     "@types/js-yaml": "^4.0.9",
     "@types/lodash": "4.17.24",
-    "@types/node": "22.19.0",
+    "@types/node": "^22.19.0",
     "@types/node-schedule": "2.1.8",
     "@types/nodemailer": "^8.0.0",
     "@types/react": "19.2.14",
@@ -179,7 +179,7 @@
     "typescript-eslint": "^8.58.2"
   },
   "engines": {
-    "node": "^22.19.0",
+    "node": "^22.19.0 || ^26.0.0",
     "pnpm": "^10.0.0"
   },
   "config": {

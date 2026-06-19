@@ -55,6 +55,7 @@ export interface JellyfinSettings {
   libraries: Library[];
   serverId: string;
   apiKey: string;
+  enableDiscordAuth: boolean;
 }
 export interface TautulliSettings {
   hostname?: string;
@@ -215,6 +216,7 @@ interface FullPublicSettings extends PublicSettings {
   newPlexLogin: boolean;
   youtubeUrl: string;
   plexClientIdentifier: string;
+  enableDiscordAuth?: boolean;
 }
 
 export interface NotificationAgentConfig {
@@ -447,6 +449,7 @@ class Settings {
         libraries: [],
         serverId: '',
         apiKey: '',
+        enableDiscordAuth: false,
       },
       tautulli: {},
       metadataSettings: {
@@ -734,6 +737,7 @@ class Settings {
       newPlexLogin: this.data.main.newPlexLogin,
       youtubeUrl: this.data.main.youtubeUrl,
       plexClientIdentifier: this.data.clientId,
+      enableDiscordAuth: this.data.jellyfin.enableDiscordAuth,
     };
   }
 

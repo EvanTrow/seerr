@@ -49,6 +49,7 @@ export interface PublicSettingsResponse {
   newPlexLogin: boolean;
   youtubeUrl: string;
   plexClientIdentifier: string;
+  enableDiscordAuth?: boolean;
 }
 
 export interface CacheItem {

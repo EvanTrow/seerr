@@ -1,2 +1,2 @@
 
-exec < /dev/tty && npx cz --hook || true
+[ -e /dev/tty ] && exec < /dev/tty && npx cz --hook || true
