@@ -241,8 +241,8 @@ async function getDiscordPluginConfig(
   apiKey: string
 ): Promise<DiscordPluginConfig> {
   // Use the shared Jellyfin client so the request carries the standard
-  // `Authorization` header. The legacy `X-Emby-Authorization` header is
-  // rejected by newer Jellyfin servers, which made this call fail with a 401.
+  // `Authorization` header. Jellyfin ignores the legacy `X-Emby-Authorization`
+  // header unless EnableLegacyAuthorization is on (off by default).
   const jellyfinClient = new JellyfinAPI(getHostname(), apiKey);
   const data =
     await jellyfinClient.getPluginConfiguration<Record<string, unknown>>(
@@ -1030,7 +1030,7 @@ authRoutes.post('/logout', async (req, res, next) => {
             await axios.delete(`${baseUrl}/Devices`, {
               params: { Id: user.jellyfinDeviceId },
               headers: {
-                'X-Emby-Authorization': `MediaBrowser Client="Seerr", Device="Seerr", DeviceId="seerr", Version="${
+                Authorization: `MediaBrowser Client="Seerr", Device="Seerr", DeviceId="seerr", Version="${
                   settings.main.mediaServerType === MediaServerType.EMBY
                     ? '1.0.0'
                     : getAppVersion()
