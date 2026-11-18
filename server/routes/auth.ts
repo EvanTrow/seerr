@@ -240,13 +240,14 @@ interface DiscordPluginConfig {
 async function getDiscordPluginConfig(
   apiKey: string
 ): Promise<DiscordPluginConfig> {
-  const url = `${getHostname()}/Plugins/${DISCORD_PLUGIN_GUID}/Configuration`;
-  const response = await axios.get<Record<string, unknown>>(url, {
-    headers: {
-      'X-Emby-Authorization': `MediaBrowser Client="Seerr", Device="Seerr", DeviceId="seerr", Version="1.0", Token="${apiKey}"`,
-    },
-  });
-  const data = response.data;
+  // Use the shared Jellyfin client so the request carries the standard
+  // `Authorization` header. The legacy `X-Emby-Authorization` header is
+  // rejected by newer Jellyfin servers, which made this call fail with a 401.
+  const jellyfinClient = new JellyfinAPI(getHostname(), apiKey);
+  const data =
+    await jellyfinClient.getPluginConfiguration<Record<string, unknown>>(
+      DISCORD_PLUGIN_GUID
+    );
   return {
     clientId: (data.ClientId as string) ?? '',
     clientSecret: (data.ClientSecret as string) ?? '',
@@ -715,6 +716,7 @@ authRoutes.get('/discord/login', async (req, res, next) => {
     logger.error('Failed to fetch Discord plugin configuration from Jellyfin', {
       label: 'Auth',
       errorMessage: e.message,
+      status: e.response?.status,
     });
     return next({
       status: 500,

@@ -284,6 +284,10 @@ class JellyfinAPI extends ExternalAPI {
     }
   }
 
+  public async getPluginConfiguration<T>(pluginId: string): Promise<T> {
+    return this.get<T>(`/Plugins/${pluginId}/Configuration`);
+  }
+
   public async getLibraries(): Promise<JellyfinLibrary[]> {
     try {
       const mediaFolderResponse = await this.get<any>(`/Library/MediaFolders`);
